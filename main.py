@@ -1,4 +1,4 @@
-from core.lexer import Lexer, TokenType
+from core.lexer import Lexer
 from core.parser import Parser
 
 code = """
