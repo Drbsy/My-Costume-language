@@ -1,53 +1,54 @@
 from core.lexer import Lexer
 from core.parser import Parser
 
-code = """
-var x = 3
+script_path = r'examples\main.zap'
 
-fn calculate_area(length: float, width: float) -> float {
-    var area: float = 100
-    var is_active = true
-    var y = is_active
-    return x
-}
-
-fn main() -> void {
-    var status: string = "Running"
-    return status
-}
-"""
-
-lexer = Lexer(code)
-parser = Parser()
-
-print_lexer = False
-print_parser = True
+print_lexer : bool = True
+print_parser: bool = True
 
 
 
-def lexer_test(tokens):
-    for token in tokens:
-        print(token)
+def read_script_file(script_path):
+    data = []
+    with open(script_path, 'r') as f:
+        for line in f:
+            data.append(line)
+    return data
 
-def parser_test(tokens):
+
+def normalize_tokens(tokens):
     for t in tokens:
         if not isinstance(t.type, str):
             t.type = t.type.name
         t.lineno = t.line    
         t.index = t.start 
-  
-    reslut = parser.parse(iter(tokens))
+    return tokens
 
-    print(reslut)
+def print_tokens(tokens):
+    for t in tokens:
+        print(t)
+    
+def run_parser(parser_obj, tokens):
+    tokens = normalize_tokens(tokens)
+    result = parser_obj.parse(iter(tokens))
+    print(result)
 
 try:
-    tokens = lexer.tokenize()
+    script_lines = read_script_file(script_path)
+    script_text = ''.join(script_lines)
 
-    if print_lexer:
-        lexer_test(tokens)
+    lex = Lexer(script_text)
+    pars = Parser()
+
+    tokens = lex.tokenize()
     
+    print('\n\n' + '_' *120 +'\n\n')
+    if print_lexer:
+        print_tokens(tokens)
+        print('\n\n' + '_' *120 +'\n\n')
+
     if print_parser:
-        parser_test(tokens)
+        run_parser(pars, tokens)
 
 except Exception as e:
     print(f"Error: {e}")

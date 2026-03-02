@@ -1,13 +1,8 @@
 ##############################################
-#Nodes
-###############################################
+# Nodes
+##############################################
 
-class NumberNode:
-    def __init__(self, tok_value):
-        self.tok_value = tok_value
-    
-    def __repr__(self):
-        return f"{self.tok_value}"
+# --- EXPRESSION NODES (Math & Logic) ---
 
 class BinOpNode:
     def __init__(self, left_node, op_tok, right_node):
@@ -16,7 +11,34 @@ class BinOpNode:
         self.right_node = right_node
 
     def __repr__(self):
-        return f"{self.left_node}, {self.op_tok}, {self.right_node}"
+        return f"BinOpNode(Left node: {self.left_node}, op : {self.op_tok}, Right node: {self.right_node})"
+
+class UnaryOpNode:
+    def __init__(self, op_tok, node):
+        self.op_tok = op_tok
+        self.node = node
+    
+    def __repr__(self):
+        return f"UnaryOpNode(op_tok : {self.op_tok}, node : {self.node})"
+
+class LogicalOpNode:
+    def __init__(self, left_node, op_tok, right_node):
+        self.left_node = left_node
+        self.op_tok = op_tok
+        self.right_node = right_node
+    
+    def __repr__(self):
+        return f"LogicalOpNode(Left node: {self.left_node}, op : {self.op_tok}, Right node: {self.right_node})"
+
+class ChainedComparisonNode:
+    def __init__(self, left_operand, comparisons):
+        self.left_operand = left_operand
+        self.comparisons = comparisons
+
+    def __repr__(self):
+        return f"ChainedComparisonNode(Left operand {self.left_operand}, comparisons : {self.comparisons})"
+
+# --- VARIABLE NODES ---
 
 class VarDeclNode:
     def __init__(self, var_name, var_type, var_value):
@@ -25,7 +47,16 @@ class VarDeclNode:
         self.var_value = var_value
     
     def __repr__(self):
-        return f"Var name : {self.var_name}, var type : {self.var_type}, var value : {self.var_value}"
+        return f"VarDeclNode(Var name : {self.var_name}, var type : {self.var_type}, var value : {self.var_value})"
+
+class VarAccessNode:
+    def __init__(self, var_name):
+        self.var_name = var_name
+    
+    def __repr__(self):
+        return f"VarAccessNode(VariableNode : {self.var_name})"
+
+# --- FUNCTION & BLOCK NODES ---
 
 class FunctionDefNode:
     def __init__(self, fn_name, fn_parms, fn_return_type, fn_body):
@@ -35,7 +66,7 @@ class FunctionDefNode:
         self.fn_body = fn_body
         
     def __repr__(self):
-        return f"(function name : {self.fn_name}, function parms : {self.fn_parms}, function return type : {self.fn_return_type}, function body : {self.fn_body})"
+        return f"FunctionDefNode(function name : {self.fn_name}, function parms : {self.fn_parms}, function return type : {self.fn_return_type}, function body : {self.fn_body})"
 
 class ParameterNode:
     def __init__(self, par_name, par_type):
@@ -43,26 +74,28 @@ class ParameterNode:
         self.par_type = par_type
     
     def __repr__(self):
-        return f"par name :{self.par_name}, par type : {self.par_type}"
-
+        return f"ParameterNode(par name :{self.par_name}, par type : {self.par_type})"
 
 class BlockNode:
     def __init__(self, statements):
         self.statements = statements
     
     def __repr__(self):
-        return f"block statements : {self.statements}"
+        return f"BlockNode(block statements : {self.statements})"
 
-class RetrunNode:
+# --- CONTROL FLOW NODES ---
+
+class IfNode:
+    def __init__(self, cases, else_case):
+        self.cases = cases
+        self.else_case = else_case
+
+    def __repr__(self):
+        return f"IfNode(cases={self.cases}, else={self.else_case})"
+
+class ReturnNode:
     def __init__(self, return_value):
         self.return_value = return_value
     
     def __repr__(self):
-        return f"return value : {self.return_value}"
-
-class VarAccessNode:
-    def __init__(self, var_name):
-        self.var_name = var_name
-    
-    def __repr__(self):
-        return f"VariableNode : {self.var_name}"
+        return f"ReturnNode(return value : {self.return_value})"

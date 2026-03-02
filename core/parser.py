@@ -7,6 +7,16 @@ class Parser(sly.Parser):
 
     tokens = {i.name for i in TokenType}
 
+    precedence = (
+        ('left', 'TOK_OR'),
+        ('left', 'TOK_AND'),
+        ('right', 'TOK_NOT'),
+        ('left', 'TOK_EQUAL_TO', 'TOK_NOT_EQUAL_TO'),
+        ('left', 'TOK_GREATER', 'TOK_GREATER_EQUAL', 'TOK_LESS', 'TOK_LESS_EQUAL'),
+        ('left', 'TOK_PLUS', 'TOK_MINUS'),
+        ('left', 'TOK_STAR', 'TOK_SLASH')
+    )
+
     #--------------------------------------------------
     # --- ENTRY POINT ---
     #--------------------------------------------------
@@ -15,77 +25,6 @@ class Parser(sly.Parser):
     def program(self, p):
         return p.global_statement_list
     
-    #--------------------------------------------------
-    # --- STATEMENT TYPES ---
-    #--------------------------------------------------
-
-    # --- GLOBAL STATMENT ---
-
-    @_('function_def', 'var_def')
-    def global_statement(self, p):
-        return p[0]
-
-    # --- LOCAL STATMENT ---
-    @_('var_def', 'return_stmt')
-    def local_statement(self, p):
-        return p[0]
-
-    #--------------------------------------------------
-    # --- BASIC VALUES ---
-    #--------------------------------------------------
-
-    @_('TOK_NUMBER')
-    def factor(self, p):
-        return p.TOK_NUMBER
-    
-    @_('TOK_STRING')
-    def sting_literal(self, p):
-        return p.TOK_STRING[1:-1]
-
-    @_('TOK_TRUE','TOK_FALSE')
-    def bool_literal(self, p):
-        return {'true' : True,'false': False}[p[0].lower()]
-    
-    @_('factor', 'sting_literal', 'bool_literal', 'TOK_ID')
-    def expr_value(self, p):
-
-        if hasattr(p, 'TOK_ID'):
-            return VarAccessNode(p.TOK_ID)
-        
-        return p[0]
-
-    #--------------------------------------------------
-    # --- TYPE SYSTEM ---
-    #--------------------------------------------------
-
-    @_('TOK_TYPE_INT', 'TOK_TYPE_STRING', 'TOK_TYPE_FLOAT', 'TOK_TYPE_BOOL', 'TOK_TYPE_LIST')
-    def type_definition(self, p):
-        return p[0]
-
-    @_('TOK_TYPE_INT', 'TOK_TYPE_STRING', 'TOK_TYPE_FLOAT', 'TOK_TYPE_BOOL' ,'TOK_TYPE_VOID')
-    def return_type_definition(self, p):
-        return p[0]
-    
-    @_('')
-    def implicit_type(self, p):
-        return "AUTO"
-    
-    @_('TOK_COLON type_definition')
-    def explicit_type(self, p):
-        return p.type_definition
-     
-    @_('explicit_type', 'implicit_type')
-    def variable_type(self, p):
-        return p[0]
-    
-    #--------------------------------------------------
-    # --- EMPTY SLOTS ---
-    #--------------------------------------------------
-
-    @_('')
-    def empty(self, p):
-        return []
-
     #--------------------------------------------------
     #--- LISTS ---
     #--------------------------------------------------
@@ -119,59 +58,238 @@ class Parser(sly.Parser):
     @_('local_statement_list', 'empty')
     def op_local_statement_list(self, p):
         return p[0]
+    
+    
+    # ---  COMPARISON STATEMENT LIST ----
 
+    @_('comparison_pair')
+    def comparison_list(self, p):
+        return [p.comparison_pair]
+    
+    @_('comparison_list comparison_pair')
+    def comparison_list(self, p):
+        p.comparison_list.append(p.comparison_pair)
+        return p.comparison_list
+    
+    #--------------------------------------------------
+    # --- STATEMENT TYPES ---
+    #--------------------------------------------------
+
+    # --- GLOBAL STATMENT ---
+
+    @_('function_def', 'var_def', 'if_stmt')
+    def global_statement(self, p):
+        return p[0]
+
+    # --- LOCAL STATMENT ---
+    @_('var_def', 'return_stmt', 'if_stmt')
+    def local_statement(self, p):
+        return p[0]
+
+    #--------------------------------------------------
+    # --- BASIC VALUES ---
+    #--------------------------------------------------
+
+    @_('TOK_NUMBER')
+    def factor(self, p):
+        return p.TOK_NUMBER
+    
+    @_('TOK_STRING')
+    def string_literal(self, p):
+        return p.TOK_STRING[1:-1]
+
+    @_('TOK_TRUE','TOK_FALSE')
+    def bool_literal(self, p):
+        return {'true' : True,'false': False}[p[0].lower()]
+    
+    @_('factor', 'string_literal', 'bool_literal', 'TOK_ID')
+    def expr_value(self, p):
+
+        if hasattr(p, 'TOK_ID'):
+            return VarAccessNode(p.TOK_ID)
+        
+        return p[0]
+
+    #--------------------------------------------------
+    # --- ARITHMETIC ---
+    #--------------------------------------------------
+
+    @_('arithmetic TOK_PLUS arithmetic',
+       'arithmetic TOK_MINUS arithmetic',
+       'arithmetic TOK_STAR arithmetic',
+       'arithmetic TOK_SLASH arithmetic')
+    def arithmetic(self, p):
+        return BinOpNode(left_node= p[0], op_tok=p[1], right_node=p[2])
+    
+    @_('expr_value') 
+    def arithmetic(self, p):
+        return p[0]
+    
+    #--------------------------------------------------
+    # --- COMPARISON ---
+    #--------------------------------------------------
+
+    @_('TOK_EQUAL_TO arithmetic',
+       'TOK_NOT_EQUAL_TO arithmetic',
+       'TOK_GREATER arithmetic',
+       'TOK_GREATER_EQUAL arithmetic',
+       'TOK_LESS arithmetic',
+       'TOK_LESS_EQUAL arithmetic')
+    def comparison_pair(self, p):
+        return (p[0], p.arithmetic)
+
+    @_('arithmetic comparison_list')
+    def comparison(self, p):
+        return ChainedComparisonNode(left_operand=p.arithmetic, comparisons=p.comparison_list)
+    
+    @_('arithmetic') 
+    def comparison(self, p):
+        return p[0]
+
+    #--------------------------------------------------
+    # --- LOGICAL OPERATORS ---
+    #--------------------------------------------------
+
+    # --- OR ---
+    @_('logical_and TOK_OR logical_or',
+       'logical_and')
+    def logical_or(self, p):
+        if len(p)>1:
+            return LogicalOpNode(left_node=p[0], op_tok=p[1], right_node=p[2])
+        return p[0]
+    
+    # --- AND ---
+
+    @_('logical_not TOK_AND logical_and',
+       'logical_not')
+    def logical_and(self, p):
+        if len(p)>1:
+            return LogicalOpNode(left_node=p[0], op_tok=p[1], right_node=p[2])
+        return p[0]
+
+    # --- NOT ---
+
+    @_('TOK_NOT logical_not')
+    def logical_not(self, p):
+        return UnaryOpNode(op_tok=p[0],node=p.logical_not)
+    
+    @_('comparison')
+    def logical_not(self,p):
+        return p[0]
+
+    #--------------------------------------------------
+    # --- TYPE SYSTEM ---
+    #--------------------------------------------------
+
+    @_('TOK_TYPE_INT', 'TOK_TYPE_STRING', 'TOK_TYPE_FLOAT', 'TOK_TYPE_BOOL', 'TOK_TYPE_LIST')
+    def type_definition(self, p):
+        return p[0]
+
+    @_('TOK_TYPE_INT', 'TOK_TYPE_STRING', 'TOK_TYPE_FLOAT', 'TOK_TYPE_BOOL' ,'TOK_TYPE_VOID')
+    def return_type_definition(self, p):
+        return p[0]
+    
+    @_('empty')
+    def implicit_type(self, p):
+        return "AUTO"
+    
+    @_('TOK_COLON type_definition')
+    def explicit_type(self, p):
+        return p.type_definition
+     
+    @_('explicit_type', 'implicit_type')
+    def variable_type(self, p):
+        return p[0]
+    
     #--------------------------------------------------
     # --- VAR LOGIC ---
     #--------------------------------------------------
-    @_('TOK_VAR TOK_ID variable_type TOK_ASSIGN expr_value')
+
+    @_('TOK_VAR TOK_ID variable_type TOK_ASSIGN logical_or')
     def var_def(self, p):
         return VarDeclNode(
             var_name = p.TOK_ID,
             var_type = p.variable_type,
-            var_value= p.expr_value)
+            var_value= p.logical_or)
     
     #--------------------------------------------------
     # --- FUNCTION LOGIC ---
     #--------------------------------------------------
 
     @_('TOK_ID TOK_COLON type_definition')
-    def paramter(self,p):
+    def parameter(self,p):
         return ParameterNode(
             par_name= p.TOK_ID,
             par_type= p.type_definition
         )
     
-    @_('paramter')
-    def paramters_list(self,p):
-        return [p.paramter]
+    @_('parameter')
+    def parameters_list(self,p):
+        return [p.parameter]
     
-    @_('paramters_list TOK_COMMA paramter')
-    def paramters_list(self,p):
-        p.paramters_list.append(p.paramter)
-        return p.paramters_list
+    @_('parameters_list TOK_COMMA parameter')
+    def parameters_list(self,p):
+        p.parameters_list.append(p.parameter)
+        return p.parameters_list
 
-    @_('')
-    def paramters_list(self,p):
+    @_('empty')
+    def parameters_list(self,p):
         return []
     
     @_('TOK_L_BRACE op_local_statement_list TOK_R_BRACE')
     def body_def(self, p):
         return BlockNode(p.op_local_statement_list)
     
-    @_('TOK_FUNCTION TOK_ID TOK_L_PAREN paramters_list TOK_R_PAREN TOK_ARROW return_type_definition body_def')
+    @_('TOK_FUNCTION TOK_ID TOK_L_PAREN parameters_list TOK_R_PAREN TOK_ARROW return_type_definition body_def')
     def function_def(self, p):
         return FunctionDefNode(
             fn_name=p.TOK_ID,
-            fn_parms=p.paramters_list,
+            fn_parms=p.parameters_list,
             fn_return_type=p.return_type_definition,
             fn_body=p.body_def
         )
 
     #--------------------------------------------------
-    # --- RETURN ---
+    # --- CONTROL FLOW ---
     #--------------------------------------------------
 
-    @_('TOK_RETURN expr_value')
-    def return_stmt(self ,p):
-        return RetrunNode(return_value=p.expr_value)
+    # --- IF/ELIF/ELSE ---
+
+    # --- IF ----
+
+    @_('TOK_IF TOK_L_PAREN logical_or TOK_R_PAREN body_def elif_blocks else_opt')
+    def if_stmt(self, p):
+        all_cases = [(p.logical_or, p.body_def)] + p.elif_blocks 
+        return IfNode(cases=all_cases, else_case=p.else_opt)
+
+    # --- ELSE ----
+    @_('TOK_ELSE body_def')
+    def else_opt(self, p):
+        return p.body_def
     
+    @_('empty')
+    def else_opt(self, p):
+        return None
+    
+    # --- ELIF ----
+    @_('TOK_ELIF TOK_L_PAREN logical_or TOK_R_PAREN body_def elif_blocks')
+    def elif_blocks(self ,p):
+        return [(p.logical_or, p.body_def)] + p.elif_blocks 
+    
+    @_('empty')
+    def elif_blocks(self, p):
+        return []
+    
+    # --- RETURN ---
+
+    @_('TOK_RETURN [ logical_or ] ')
+    def return_stmt(self ,p):
+        return ReturnNode(return_value=p.logical_or)
+    
+    #--------------------------------------------------
+    # --- UTILITIES ---
+    #--------------------------------------------------
+
+    @_('')
+    def empty(self, p):
+        return []
