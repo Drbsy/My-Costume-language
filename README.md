@@ -92,10 +92,8 @@ Current Progress :  semantic analysis
 
 > My Plane
 
-to use python at the front end and llvm aa the backend
-> importante
+to use python at the front end and llvm at the backend
 
-i used ai to helps me come whit better var | fun | comments names for my project
 
 
 
