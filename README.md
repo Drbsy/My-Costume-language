@@ -92,7 +92,7 @@ Current Progress :  semantic analysis
 
 > My Plane
 
-to use python at the front end and llvm at the backend
+to use python at the front end and (llvm at the backend) well mybe later (for now i well go whit interpreted)
 
 
 
