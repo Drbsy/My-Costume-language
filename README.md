@@ -11,7 +11,7 @@ and still locking for a name for it :)
     var bonus : float = 1.5
     var name : string = "Ali"
     var passed : bool = true
-    var names : list = ["Ahmed", "Ali", "Mohamed:]
+    var names : list = ["Ahmed", "Ali", "Mohamed"]
     
     fn calcFinal(base : int, multiplier : float) -> float {
         var result = base * multiplier
