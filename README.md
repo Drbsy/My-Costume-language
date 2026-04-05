@@ -86,9 +86,7 @@ and still locking for a name for it :)
 
 ## Notes
 
-Current Progress :  semantic analysis
-
-  
+Current Progress :  Frontend ✅  
 
 > My Plane
 
